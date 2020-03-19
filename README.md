@@ -29,7 +29,7 @@ This lab is broken up into the following steps:
 
 1. [Add messaging components to the Stock Trader app](#step-4-add-messaging-components-to-the-stock-trader-app)
 
-1. [Generate some test data with the Stock Trader app](#step-5-generetae-some-test-data-with-the-stock-trader-app)
+1. [Generate some test data with the Stock Trader app](#step-5-generate-some-test-data-with-the-stock-trader-app)
 
 1. [Verify transaction data was replicated to the Trade History database](#step-6-verify-transaction-data-was-replicated-to-the-trade-history-database)
 
@@ -75,13 +75,13 @@ This lab is broken up into the following steps:
 
    ![Generate API key](images/generate-api-key.png)
 
-2.5 Name the application `stocktrader-user???` where `user???` is your assigned student id. For example if your student id is `user002` then name the topic `stocktrader-user002`.
+2.5 Name the application `stocktrader-user???` where `user???` is your assigned student id. For example if your student id is `user002` then name the application`stocktrader-user002`.
 
 2.6 Select **Produce and consume** for the capabilities of the API Key. Click **Next**.
 
   ![API Key capabilities](images/api-key-capabilities.png)
 
-2.7 Enter the name of your topic e.g. `stocktrader-user001`. Click **Next**.
+2.7 Enter the name of your topic e.g. `stocktrader-user002`. Click **Next**.
 
 2.8 Click **Generate API key**
 
@@ -103,7 +103,7 @@ This lab is broken up into the following steps:
 
    ![Upload icon](images/upload-icon.png)
 
-3.2 Select the file **es-cert.jks** that you downloaded in the previous step and follow teh prompts to upload it to the IBM Cloud Shell.
+3.2 Select the file **es-cert.jks** that you downloaded in the previous step and follow the prompts to upload it to the IBM Cloud Shell.
 
 
 ## Step 4: Add messaging components to the Stock Trader app

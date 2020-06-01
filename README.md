@@ -14,9 +14,9 @@ The architecture of the solution you will build is shown below:
    * sends completed transactions to a local IBM MQ queue.
    * calls the **trade-history** service to get aggregated historical trade data.
 
-* The **event-producer** microservice consumes the  transaction data from IBM MQ and sends it to a topic in Event Streams. By scaling this service horizontally you can decrease the latency between the  time the transaction is committed to the transactional database and when it is available to be queried in the reporting database,
+* The **Kafka Connect** microservice uses the Kafka Connect framework and an IBM MQ source to consume the  transaction data from IBM MQ and sends it to a topic in Event Streams. By scaling this service horizontally you can decrease the latency between the  time the transaction is committed to the transactional database and when it is available to be queried in the reporting database,
 
-* The **event-consumer** microservice receives the transaction data from  Event Streams and calls the  **trade-history** service to publish the data to the reporting database. By scaling this service horizontally you can decrease the latency between the  time the transaction is committed to the transactional database and when it is available to be queried in the reporting database.
+* The **Kafka Connect** microservice uses the Kafka Connect framework and a Mongodb sink to receive the transaction data from  Event Streams and  publishes the data to the reporting database. By scaling this service horizontally you can decrease the latency between the  time the transaction is committed to the transactional database and when it is available to be queried in the reporting database.
 
 
 This lab is broken up into the following steps:
@@ -27,9 +27,9 @@ This lab is broken up into the following steps:
 
 1. [Upload the Java truststore to the IBM Cloud Shell](#step-3-upload-the-java-truststore-to-the-ibm-cloud-shell)
 
-1. [Add messaging components to the Stock Trader app](#step-4-add-messaging-components-to-the-stock-trader-app)
+1. [Add messaging components to the Trader Lite app](#step-4-add-messaging-components-to-the-trader-lite-app)
 
-1. [Generate some test data with the Stock Trader app](#step-5-generate-some-test-data-with-the-stock-trader-app)
+1. [Generate some test data with the Trader Lite app](#step-5-generate-some-test-data-with-the-trader-lite-app)
 
 1. [Verify transaction data was replicated to the Trade History database](#step-6-verify-transaction-data-was-replicated-to-the-trade-history-database)
 
@@ -77,11 +77,13 @@ This lab is broken up into the following steps:
 
 2.5 Name the application `stocktrader-user???` where `user???` is your assigned student id. For example if your student id is `user002` then name the application`stocktrader-user002`.
 
-2.6 Select **Produce and consume** for the capabilities of the API Key. Click **Next**.
+2.6 Select **Produce, consume, create topics and schemas** for the capabilities of the API Key. Click **Next**.
 
   ![API Key capabilities](images/api-key-capabilities.png)
 
-2.7 Enter the name of your topic e.g. `stocktrader-user002`. Click **Next**.
+2.7 Select all topics. Click **Next**.
+
+  ![All topics](images/all-topics.png)
 
 2.8 Click **Generate API key**
 
@@ -106,35 +108,66 @@ This lab is broken up into the following steps:
 3.2 Select the file **es-cert.jks** that you downloaded in the previous step and follow the prompts to upload it to the IBM Cloud Shell.
 
 
-## Step 4: Add messaging components to the Stock Trader app
+## Step 4: Add messaging components to the Trader Lite app
 
-4.1 you haven't previously cloned the Github repo with the Stock Trader app deployment artifacts, run the following command in the IBM Cloud Shell
+4.1 you haven't previously cloned the Github repo with the Trader Lite app deployment artifacts, run the following command in the IBM Cloud Shell
 
 ```
-git clone https://github.com/IBMStockTraderLite/stocktrader-cp4i.git
+git clone https://github.com/IBMStockTraderLite/traderlite-cp4i.git
 ```
 
 4.2 Go to the directory required to run the setup scripts
 
 ```
-cd stocktrader-cp4i/scripts
+cd traderlite-cp4i/scripts
 ```
 
 4.3 Run the following command, substituting the Bootstrap hostname and API Key that you saved earlier. Note that the third parameter is the Java truststore file that you just uploaded.
 
 ```
-./addMessaging.sh [BOOTSTRAP SERVER HOSTNAME] [YOUR API KEY] ../../es-cert.jks
+./addKafkaIntegration.sh [BOOTSTRAP SERVER HOSTNAME] [YOUR API KEY] ../../es-cert.jks
 ```
   The output should look like the following:
 
-  ![Add messaging script](images/add-messaging-script.png)
+  ```
+Script being run from correct folder
+Validating student id  ...
+Verifying that the Trader Lite Helm chart is already installed ...
+Found the Trader Lite Helm chart installed in this project
+Using stocktrader-user001 as Kafka topic name ...
+Upgrading Trader Lite Helm chart with Kafka Integration enabled ...
+Release "traderlite" has been upgraded. Happy Helming!
+NAME: traderlite
+LAST DEPLOYED: Mon Jun  1 12:17:51 2020
+NAMESPACE: trader-user001
+STATUS: deployed
+REVISION: 2
+NOTES:
+Trader Lite V2.0 is deployed.
 
-4.4 Wait for all the pods to start. Run the following command repeatedly until all the pods are in the *Ready* state as shown below
+Run  the following command to get the URL of  the applications's UI:
+ echo "http://"`oc get route traderlite-tradr  -o jsonpath='{.spec.host }'`"/tradr"
+Wait for all pods to be in the 'Ready' state before continuing
+  ```
+
+4.4 Wait for all the pods to start. Run the following command.
 
 ```
-oc get pods | grep -v deploy
+oc get pods
 ```
-  ![Pods running](images/pods-running.png)
+  Repeat the command until all the pods are in the *Ready* state as shown below:
+
+  ```
+NAME                                                   READY   STATUS    RESTARTS   AGE
+traderlite-ibm-mq-0                                    1/1     Running   0          64s
+traderlite-kafka-connect-standalone-5f4dcbb546-pq7qx   1/1     Running   0          66s
+traderlite-mariadb-0                                   1/1     Running   0          44m
+traderlite-mongodb-6c79bf9554-kd5z8                    1/1     Running   0          44m
+traderlite-portfolio-6d55889b8c-6c28l                  1/1     Running   0          65s
+traderlite-stock-quote-7965448598-lzwqh                1/1     Running   0          44m
+traderlite-trade-history-5648f749c4-5hbhq              1/1     Running   0          44m
+traderlite-tradr-6cd8d879f4-hbcfr                      1/1     Running   0          44m
+  ```
 
 
 ## Step 5: Generate some test data with the Stock Trader app
@@ -142,7 +175,7 @@ oc get pods | grep -v deploy
 5.1 From the command line run the following script:
 
 ```
-./showTradrURL.sh
+./showTradrUrl.sh
 ```
 
 5.2 Copy the URL that is output and access it with your browser
@@ -169,7 +202,7 @@ oc get pods | grep -v deploy
 6.1 From the  IBM Cloud Shell terminal, run the following command to show the Trader History service URL for listing trade data
 
 ```
-./showHistoryURL.sh
+./showHistoryUrl.sh
 ```
 
 6.2 Copy the URL that is output and access it with your browser
@@ -205,6 +238,6 @@ Congratulations ! You successfully completed the following key steps in this lab
 
 * Created an Event Streams topic
 * Retrieved all the credentials needed to access the topic from  an application .
-* Configured the Stock Trader app to use your topic
-* Generated transactions in the Stock Trader app and verified that the data is being replicated via Event Streams.
+* Configured the Trader Lite app to use your topic
+* Generated transactions in the Trader Lite app and verified that the data is being replicated via Event Streams.
 * Examined messages sent to your topic in the Event Streams Management console.

@@ -6,17 +6,13 @@ The architecture of the solution you will build is shown below:
 
 ![Architecture diagram](images/architecture.png)
 
-* **Tradr** is a Node.js UI for the portfolio service
-
 * The **portfolio** microservice sits at the center of the application. This microservice:
-   * persists trade data  using JDBC to a MariaDB database
-   * invokes the **stock-quote** service that invokes an API defined in API Connect in CP4I to get stock quotes
    * sends completed transactions to a local IBM MQ queue.
    * calls the **trade-history** service to get aggregated historical trade data.
 
-* The **Kafka Connect** microservice uses the Kafka Connect framework and an IBM MQ source to consume the  transaction data from IBM MQ and sends it to a topic in Event Streams. By scaling this service horizontally you can decrease the latency between the  time the transaction is committed to the transactional database and when it is available to be queried in the reporting database,
+* The **Kafka Connect** source uses the Kafka Connect framework and an IBM MQ source to consume the  transaction data from IBM MQ and sends it to a topic in Event Streams. By scaling this service horizontally you can decrease the latency between the  time the transaction is committed to the transactional database and when it is available to be queried in the reporting database,
 
-* The **Kafka Connect** microservice uses the Kafka Connect framework and a Mongodb sink to receive the transaction data from  Event Streams and  publishes the data to the reporting database. By scaling this service horizontally you can decrease the latency between the  time the transaction is committed to the transactional database and when it is available to be queried in the reporting database.
+* The **Kafka Connect** sink uses the Kafka Connect framework and a Mongodb sink to receive the transaction data from  Event Streams and  publishes the data to the reporting database. By scaling this service horizontally you can decrease the latency between the  time the transaction is committed to the transactional database and when it is available to be queried in the reporting database.
 
 
 This lab is broken up into the following steps:
@@ -39,25 +35,31 @@ This lab is broken up into the following steps:
 
 ## Step 1: Create a topic in the Event Streams Management Console
 
-1.1 Access the Event Streams Management Console using the URL provided to you by your instructors.
+1.1 In a new browser tab open the CP4I **Platform Home** URL provided to you by your instructors.
 
-1.2 Sign in with the credentials provided to you by your instructors.
+1.2 Login with your *user???* credentials
 
-1.3 Click on the **Create a topic** tile
+1.3 Click on **Skip Welcome**
+
+1.4 Click on **View instances** and then click the link for Event Streams
+
+  ![Navigate to API Connect](images/nav-to-es.png)
+
+1.5 Click on the **Create a topic** tile
 
    ![Create a topic](images/create-topic.png)
 
-1.4 Name the topic `stocktrader-user???` where `user???` is your assigned student id. For example if your student id is `user002` then name the topic `stocktrader-user002`. Click **Next**.
+1.6 Name the topic `traderlite-user???` where `user???` is your assigned student id. For example if your student id is `user002` then name the topic `traderlite-user002`. Click **Next**.
 
-1.5 Leave the default for the number of partitions and click **Next**.
+1.7 Leave the default for the number of partitions and click **Next**.
 
-1.6 Leave the default for message retention and click **Next**.
+1.8 Leave the default for message retention and click **Next**.
 
-1.7 Change the Replication factor to 1 and click **Create topic**.
+1.9 Change the Replication factor to 1 and click **Create topic**.
 
    ![Replication factor](images/replication-factor.png)
 
-1.8 You should see your new topic listed.
+1.10 You should see your new topic listed.
 
 ## Step 2: Get credentials for your Event Streams topic
 
@@ -69,13 +71,13 @@ This lab is broken up into the following steps:
 
   ![Copy bootstrap hostname](images/copy-bootstrap-hostname.png)
 
-2.3 Create a local file and paste the bootstrap server hostname into it.  You'll need this later to connect the Stock Trader application to your Event Streams topic.
+2.3 Create a local file and paste the bootstrap server hostname into it.  You'll need this later to connect the Stock Trader Lite application to your Event Streams topic.
 
 2.4 Click **Generate API key**
 
    ![Generate API key](images/generate-api-key.png)
 
-2.5 Name the application `stocktrader-user???` where `user???` is your assigned student id. For example if your student id is `user002` then name the application`stocktrader-user002`.
+2.5 Name the application `traderlite-user???` where `user???` is your assigned student id. For example if your student id is `user002` then name the application`traderlite-user002`.
 
 2.6 Select **Produce, consume, create topics and schemas** for the capabilities of the API Key. Click **Next**.
 
@@ -110,7 +112,7 @@ This lab is broken up into the following steps:
 
 ## Step 4: Add messaging components to the Trader Lite app
 
-4.1 you haven't previously cloned the Github repo with the Trader Lite app deployment artifacts, run the following command in the IBM Cloud Shell
+4.1 If you haven't previously cloned the Github repo with the Trader Lite app deployment artifacts, run the following command in the IBM Cloud Shell
 
 ```
 git clone https://github.com/IBMStockTraderLite/traderlite-cp4i.git
@@ -130,24 +132,17 @@ cd traderlite-cp4i/scripts
   The output should look like the following:
 
   ```
-Script being run from correct folder
-Validating student id  ...
-Verifying that the Trader Lite Helm chart is already installed ...
-Found the Trader Lite Helm chart installed in this project
-Using stocktrader-user001 as Kafka topic name ...
-Upgrading Trader Lite Helm chart with Kafka Integration enabled ...
-Release "traderlite" has been upgraded. Happy Helming!
-NAME: traderlite
-LAST DEPLOYED: Mon Jun  1 12:17:51 2020
-NAMESPACE: trader-user001
-STATUS: deployed
-REVISION: 2
-NOTES:
-Trader Lite V2.0 is deployed.
-
-Run  the following command to get the URL of  the applications's UI:
- echo "http://"`oc get route traderlite-tradr  -o jsonpath='{.spec.host }'`"/tradr"
-Wait for all pods to be in the 'Ready' state before continuing
+  Script being run from correct folder
+  Validating student id  ...
+  Verifying that Trader Lite is already installed ...
+  Found Trader Lite installed in this project
+  Using traderlite-user001 as Kafka topic name ...
+  Adding secret kafkaconnect-keystore with downloaded Java keystore
+  secret/kafkaconnect-keystore created
+  Updating Trader Lite  with Kafka Integration ...
+  traderlite.operators.clouddragons.com/traderlite patched
+  Kafka Integration successful
+  Wait for all pods to be in the 'Ready' state before continuing
   ```
 
 4.4 Wait for all the pods to start. Run the following command.
@@ -159,18 +154,19 @@ oc get pods
 
   ```
 NAME                                                   READY   STATUS    RESTARTS   AGE
-traderlite-ibm-mq-0                                    1/1     Running   0          64s
-traderlite-kafka-connect-standalone-5f4dcbb546-pq7qx   1/1     Running   0          66s
-traderlite-mariadb-0                                   1/1     Running   0          44m
-traderlite-mongodb-6c79bf9554-kd5z8                    1/1     Running   0          44m
-traderlite-portfolio-6d55889b8c-6c28l                  1/1     Running   0          65s
-traderlite-stock-quote-7965448598-lzwqh                1/1     Running   0          44m
-traderlite-trade-history-5648f749c4-5hbhq              1/1     Running   0          44m
-traderlite-tradr-6cd8d879f4-hbcfr                      1/1     Running   0          44m
+traderlite-ibm-mq-0                                    1/1     Running   0          46s
+traderlite-kafka-connect-standalone-5db97dcd49-lrgls   1/1     Running   0          47s
+traderlite-mariadb-0                                   1/1     Running   0          121m
+traderlite-mongodb-fd7f6d55b-224vd                     1/1     Running   0          121m
+traderlite-operator-6ddd5c4774-l5dcd                   1/1     Running   0          18d
+traderlite-portfolio-546d45bf4f-zm2ds                  1/1     Running   0          117m
+traderlite-portfolio-74864687f5-gn54p                  1/1     Running   0          46s
+traderlite-stock-quote-7965448598-wgxtw                1/1     Running   0          121m
+traderlite-trade-history-5648f749c4-cn6th              1/1     Running   0          121m
+traderlite-tradr-6cd8d879f4-679q5                      1/1     Running   0          121m
   ```
 
-
-## Step 5: Generate some test data with the Stock Trader app
+## Step 5: Generate some test data with the Trader Lite app
 
 5.1 From the command line run the following script:
 
@@ -186,13 +182,15 @@ traderlite-tradr-6cd8d879f4-hbcfr                      1/1     Running   0      
 
   ![Add Client](images/add-client.png)
 
-5.5 Click on the Portfolio ID of the added client
+5.5 Add the client info using valid formats for the Phone Number and email address. Click **Save**.
+
+5.6 Click on the Portfolio ID of the added client
 
   ![Portfolio Details](images/portfolio-id.png)
 
-5.6 Click **Buy Stock**. Select a company and enter the number of shares. Click **Buy shares**.
+5.7 Click **Buy Stock**. Select a company and enter the number of shares. Click **Buy shares**.
 
-5.7 Do 2 or 3 more transactions (either buy or sell).
+5.8 Do 2 or 3 more transactions (either buy or sell).
 
    ![Buy or sell](images/buying-selling.png)
 

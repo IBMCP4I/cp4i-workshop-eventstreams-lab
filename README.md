@@ -55,7 +55,7 @@ This lab is broken up into the following steps:
 
 1.8 Leave the default for message retention and click **Next**.
 
-1.9 Change the Replication factor to 1 and click **Create topic**.
+1.9 Change the **Replication factor** and **Minimum in-sync replicas** to 1 and click **Create topic**.
 
    ![Replication factor](images/replication-factor.png)
 
